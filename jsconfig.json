@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": { "@/*": ["./*"] },
+    "jsx": "preserve"
+  },
+  "include": ["app/**/*", "lib/**/*"],
+  "exclude": ["node_modules"]
+}

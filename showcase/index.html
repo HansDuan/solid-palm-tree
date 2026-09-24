@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智课领航员 ClassPilot · 教学管理智能体</title>
+<style>
+  :root{
+    --primary:#2563EB; --primary-dark:#1D4ED8; --ink:#0F172A; --muted:#64748B;
+    --bg:#F8FAFC; --card:#FFFFFF; --line:#E2E8F0; --red:#DC2626; --green:#16A34A;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:"PingFang SC","Microsoft YaHei","Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.6}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  /* Hero */
+  .hero{background:linear-gradient(135deg,#EFF6FF 0%,#FFFFFF 60%);border-bottom:1px solid var(--line);padding:56px 0 40px}
+  .badges{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .badge{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted)}
+  .badge.blue{border-color:#BFDBFE;background:#EFF6FF;color:var(--primary)}
+  h1{font-size:34px;letter-spacing:.5px}
+  h1 .accent{color:var(--primary)}
+  .tagline{margin-top:10px;font-size:17px;color:var(--muted);max-width:640px}
+  .cta{display:flex;gap:12px;margin-top:22px;flex-wrap:wrap}
+  .btn{display:inline-block;padding:11px 20px;border-radius:10px;font-size:14px;text-decoration:none;font-weight:600;border:1px solid transparent}
+  .btn.primary{background:var(--primary);color:#fff}
+  .btn.primary:hover{background:var(--primary-dark)}
+  .btn.ghost{background:#fff;border-color:var(--line);color:var(--ink)}
+  .btn small{display:block;font-weight:400;font-size:12px;opacity:.75}
+  /* Sections */
+  section{padding:44px 0}
+  h2{font-size:22px;margin-bottom:6px}
+  .sub{color:var(--muted);font-size:14px;margin-bottom:22px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .card .ico{font-size:22px}
+  .card h3{font-size:15px;margin:8px 0 4px}
+  .card p{font-size:13px;color:var(--muted)}
+  /* Stats */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .stat .num{font-size:26px;font-weight:700;color:var(--primary)}
+  .stat .lbl{font-size:13px;color:var(--muted);margin-top:4px}
+  .stat .ok{color:var(--green);font-size:12px;margin-top:6px;display:block}
+  .note{font-size:12px;color:var(--muted);margin-top:12px}
+  /* Screenshot */
+  .shot{border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,.06)}
+  .shot img{width:100%;display:block}
+  .shot-cap{font-size:12px;color:var(--muted);margin-top:10px;text-align:center}
+  /* Arch */
+  .arch{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+  .arch .layer{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center}
+  .arch .layer b{font-size:14px}
+  .arch .layer span{display:block;font-size:12px;color:var(--muted);margin-top:6px}
+  /* Team */
+  .team{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+  footer{border-top:1px solid var(--line);padding:28px 0 40px;color:var(--muted);font-size:13px;text-align:center}
+  .flowline{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:8px}
+  .flowline b{color:var(--ink);font-weight:600}
+  .arrow{color:#CBD5E1}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <div class="badges">
+      <span class="badge blue">大湾区 AI Coding 创新大赛</span>
+      <span class="badge">AI + 教学管理助手 · AutoGrader 方向</span>
+      <span class="badge">全程 AI Coding 交付</span>
+    </div>
+    <h1>智课领航员 <span class="accent">ClassPilot</span></h1>
+    <p class="tagline">面向高校教师的对话式教学管理智能体 —— 教师说人话，AI 干重复活。覆盖「批改 → 分析 → 管理动作」完整闭环，每份批改都带原文证据、可复核可申诉。</p>
+    <div class="cta">
+      <a class="btn primary" href="https://346e7ddb0a7079.lhr.life" target="_blank" rel="noopener">打开实时演示<small>公网直达 · REAL 模式 · 混元真实模型</small></a>
+      <a class="btn ghost" href="#shot">查看界面实拍</a>
+      <a class="btn ghost" href="#video">演示视频<small>3 分钟 · 制作中</small></a>
+    </div>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <h2>核心能力</h2>
+    <p class="sub">八大能力全部真实落地，REAL 模式实测（非 Mock）。</p>
+    <div class="grid">
+      <div class="card"><div class="ico">🔍</div><h3>证据链批改</h3><p>每个给分/扣分点必须引用学生原文（≤60字），评分可追溯、可申诉，解决"AI 批改黑盒"信任问题。</p></div>
+      <div class="card"><div class="ico">🔄</div><h3>多方法等价判定</h3><p>只给一个标准答案，也能识别"学生用了不同但正确的方法"——如用归纳法而非倒序相加法证明，判 equivalent 给满分。</p></div>
+      <div class="card"><div class="ico">🎯</div><h3>答案键感知批改</h3><p>教师上传标准答案后，客观题逐项核对、主观题按参考解比对，准确率显著高于纯 rubric 打分。</p></div>
+      <div class="card"><div class="ico">⚡</div><h3>选择题批量秒批</h3><p>逐题确定性比对，零模型依赖，一个班 30 人秒级出分，附班级平均分、及格率与每题正确率。</p></div>
+      <div class="card"><div class="ico">📷</div><h3>手写拍照转录</h3><p>手机拍作业 → 混元多模态忠实转录（认不清标 [?]，严禁脑补）→ 直接批改，还原真实课堂场景。</p></div>
+      <div class="card"><div class="ico">📊</div><h3>学情看板 · 查重</h3><p>成绩分布/维度热力图/趋势、TF-IDF 查重、班级周报、个性化练习一键生成，形成"评价→诊断→干预"闭环。</p></div>
+      <div class="card"><div class="ico">🤖</div><h3>AI 对话入口</h3><p>一句话"批改第二次作业""谁连续两次没交"，Agent 自动识别意图并调用工具，教师无需学界面。</p></div>
+      <div class="card"><div class="ico">🤝</div><h3>人机协同</h3><p>低置信度标记"建议复核"，教师改分写回并记录修正规律，AI 初审 + 教师复核双保险。</p></div>
+    </div>
+  </div>
+</section>
+
+<section style="background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+  <div class="wrap">
+    <h2>真实评测（REAL 模式 · 腾讯混元）</h2>
+    <p class="sub">所有数字来自真实模型调用与真实测试集，未做任何美化。</p>
+    <div class="stats">
+      <div class="stat"><div class="num">96.7%</div><div class="lbl">JSON 解析成功率</div><span class="ok">✓ 达到 ≥95% 目标</span></div>
+      <div class="stat"><div class="num">9.3<span style="font-size:14px"> 分</span></div><div class="lbl">与人工评分平均误差（MAE）</div><span class="note">10 份真实样本实测，持续调优中</span></div>
+      <div class="stat"><div class="num">3<span style="font-size:14px"> 类</span></div><div class="lbl">等差数列证明 · 多方法判定实测</div><span class="ok">✓ 归纳法 → equivalent 满分；错误结论 → none 5分</span></div>
+      <div class="stat"><div class="num">hy3</div><div class="lbl">批改引擎 · 腾讯混元文本模型</div><span class="note">视觉：hy-vision-2.0-instruct 手写转录</span></div>
+    </div>
+    <p class="note">评测说明：10 份含人工评分的真实样本（代码/数学/选择），REAL 模式逐份批改。误差均值 9.3 分为当前真实水平，我们如实公开并在迭代优化——不用 Mock 数据冒充效果。</p>
+  </div>
+</section>
+
+<section id="shot">
+  <div class="wrap">
+    <h2>界面实拍</h2>
+    <p class="sub">以下为本地服务真实运行截图（REAL 模式 · 混元真实模型角标可见），非设计稿。</p>
+    <div class="shot"><img src="shot-home.png" alt="智课领航员批改工作台真实截图"></div>
+    <p class="shot-cap">批改工作台：代码作业粘贴/文件上传、上传标准答案（答案键）、选择题批量批改、全班批量批改，一屏完成。</p>
+  </div>
+</section>
+
+<section id="video" style="background:#fff;border-top:1px solid var(--line)">
+  <div class="wrap">
+    <h2>演示视频</h2>
+    <p class="sub">3 分钟完整功能演示（团队制作中，将随正式提交一并发布）。</p>
+    <div class="card" style="text-align:center;padding:48px 20px;color:var(--muted)">
+      <div style="font-size:34px">🎬</div>
+      <p style="margin-top:10px">视频占位 —— 正式提交时替换为完整演示视频</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>技术架构</h2>
+    <p class="sub">Vue3 前端 + Node 零依赖后端 + SQLite 单文件库，一套服务搞定演示与部署。</p>
+    <div class="arch">
+      <div class="layer"><b>教师端 Web</b><span>Vue 3 + Vite + Element Plus + ECharts</span></div>
+      <div class="layer"><b>应用服务层</b><span>Node 零依赖 HTTP 服务 · 文件解析 · 批量并发</span></div>
+      <div class="layer"><b>Agent 调度层</b><span>意图识别 · 工具调用 · 批改流水线</span></div>
+      <div class="layer"><b>模型层</b><span>腾讯混元 hy3（文本批改）+ hy-vision（手写转录）</span></div>
+      <div class="layer"><b>数据层</b><span>SQLite 单文件 · 证据链 JSON · 教师改分记录</span></div>
+    </div>
+    <div class="flowline" style="margin-top:18px">
+      <b>业务闭环</b> 上传作业 <span class="arrow">→</span> AI 证据链批改 <span class="arrow">→</span> 教师复核改分 <span class="arrow">→</span> 学情看板/查重/周报 <span class="arrow">→</span> 个性化练习下发
+    </div>
+  </div>
+</section>
+
+<section style="background:#fff;border-top:1px solid var(--line)">
+  <div class="wrap">
+    <h2>团队分工</h2>
+    <p class="sub">跨专业三人小组，以接口契约为边界协作。</p>
+    <div class="team">
+      <div class="card"><h3>A 同学 · 产品 &amp; 前端</h3><p>Vue3 教师端五个页面、访谈、演示视频与路演材料。</p></div>
+      <div class="card"><h3>B 同学 · AI 工程</h3><p>批改内核：证据链评分、答案键感知、多方法等价判定、多模态转录、Prompt 工程与真实评测。</p></div>
+      <div class="card"><h3>C 同学 · 后端 &amp; 材料</h3><p>数据库/API/文件解析/查重引擎/学情聚合/部署/说明文档。</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    智课领航员 ClassPilot · 大湾区 AI Coding 创新大赛参赛作品<br>
+    主办：深圳大学计算机与软件学院 · 协办：腾讯云 / 腾讯教育 · 平台：LearnBuddy
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,90 @@
+{
+  "meta": {
+    "scene": "《数据结构与算法》作业 / 《高等数学》练习",
+    "created": "2026-09-22",
+    "owner": "B同学",
+    "note": "human_total 为人工标注的期望总分，用于 MAE 计算；MOCK 模式下该指标无意义，仅供真实模型评测使用。"
+  },
+  "samples": [
+    {
+      "id": "s01",
+      "type": "code",
+      "assignment": { "course": "数据结构与算法", "title": "二分查找实现", "description": "实现二分查找函数，要求处理边界条件，分析时间复杂度并加注释" },
+      "human_total": 92,
+      "notes": "实现正确，含注释与复杂度分析，边界处理写得清楚",
+      "text": "def binary_search(arr, target):\n    # 在有序数组中二分查找 target，返回下标，不存在返回 -1\n    left, right = 0, len(arr) - 1\n    while left <= right:\n        mid = (left + right) // 2\n        if arr[mid] == target:\n            return mid\n        elif arr[mid] < target:\n            left = mid + 1\n        else:\n            right = mid - 1\n    return -1\n# 时间复杂度：每次区间减半，为 O(log n)，空间复杂度 O(1)\n# 边界条件：空数组时 right = -1，循环不执行，正确返回 -1"
+    },
+    {
+      "id": "s02",
+      "type": "code",
+      "assignment": { "course": "数据结构与算法", "title": "冒泡排序", "description": "实现冒泡排序，要求处理边界条件，分析时间复杂度并加注释" },
+      "human_total": 55,
+      "notes": "能跑出正确结果但无注释、无复杂度分析，命名随意",
+      "text": "def f(a):\n    n=len(a)\n    for i in range(n):\n        for j in range(n-1):\n            if a[j]>a[j+1]:\n                a[j],a[j+1]=a[j+1],a[j]\n    return a"
+    },
+    {
+      "id": "s03",
+      "type": "code",
+      "assignment": { "course": "数据结构与算法", "title": "两数之和", "description": "给定数组与目标值，返回两数下标，要求说明复杂度" },
+      "human_total": 78,
+      "notes": "用哈希表一次遍历，正确，缺少部分注释",
+      "text": "class Solution:\n    def twoSum(self, nums, target):\n        seen = {}\n        for i, v in enumerate(nums):\n            if target - v in seen:\n                return [seen[target - v], i]\n            seen[v] = i\n        return []\n# 时间复杂度 O(n)，哈希查找平均 O(1)"
+    },
+    {
+      "id": "s04",
+      "type": "code",
+      "assignment": { "course": "数据结构与算法", "title": "链表反转", "description": "反转单链表，要求处理空链表与单节点" },
+      "human_total": 40,
+      "notes": "逻辑有错，未处理空链表，无注释",
+      "text": "def reverse(head):\n    pre=None\n    cur=head\n    while cur:\n        cur.next=pre\n        pre=cur\n        cur=cur.next\n    return pre"
+    },
+    {
+      "id": "s05",
+      "type": "code",
+      "assignment": { "course": "数据结构与算法", "title": "斐波那契数列", "description": "求第 n 项，要求分析递归与迭代的复杂度差异" },
+      "human_total": 85,
+      "notes": "给出迭代解法并对比递归，说明到位",
+      "text": "def fib(n):\n    # 迭代法，避免递归重复计算\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a\n# 迭代：时间 O(n)，空间 O(1)\n# 朴素递归：时间 O(2^n)，存在大量重复子问题，不推荐"
+    },
+    {
+      "id": "s06",
+      "type": "math",
+      "assignment": { "course": "高等数学", "title": "证明等差数列求和公式", "description": "证明 Sn = n(a1+an)/2，要求步骤完整" },
+      "human_total": 88,
+      "notes": "倒序相加法，步骤完整，说明清晰",
+      "text": "解：设 Sn = a1 + a2 + ... + an。\n将其倒序写：Sn = an + a(n-1) + ... + a1。\n两式相加：2Sn = (a1+an) + (a2+a(n-1)) + ... + (an+a1)。\n由等差数列性质，a1+an = a2+a(n-1) = ... ，共有 n 组。\n因此 2Sn = n(a1+an)，即 Sn = n(a1+an)/2。\n证毕。"
+    },
+    {
+      "id": "s07",
+      "type": "math",
+      "assignment": { "course": "高等数学", "title": "求极限", "description": "求 lim(x→0) sin x / x，要求写明方法" },
+      "human_total": 45,
+      "notes": "结论正确但无推导过程，仅一句话",
+      "text": "解：lim(x→0) sin x / x = 1。"
+    },
+    {
+      "id": "s08",
+      "type": "math",
+      "assignment": { "course": "高等数学", "title": "复合函数求导", "description": "求 y = sin(2x+1) 的导数，写清链式法则应用" },
+      "human_total": 80,
+      "notes": "链式法则使用正确，步骤较简但完整",
+      "text": "解：令 u = 2x + 1，则 y = sin u。\n由链式法则 dy/dx = dy/du · du/dx = cos u · 2 = 2cos(2x+1)。\n所以 y' = 2cos(2x+1)。"
+    },
+    {
+      "id": "s09",
+      "type": "choice",
+      "assignment": { "course": "数据结构与算法", "title": "选择题：哈希表查找复杂度", "description": "选择正确答案并简述理由" },
+      "human_total": 90,
+      "notes": "答案正确且解释冲突处理",
+      "text": "答案：B（平均 O(1)）。\n理由：哈希表通过哈希函数直接定位桶位置，理想情况下一次访问即可命中，平均时间复杂度 O(1)；发生哈希冲突时退化为链地址查找，最坏 O(n)。"
+    },
+    {
+      "id": "s10",
+      "type": "choice",
+      "assignment": { "course": "数据结构与算法", "title": "选择题：快速排序最坏复杂度", "description": "选择正确答案并简述理由" },
+      "human_total": 30,
+      "notes": "答案错误且无有效解释",
+      "text": "答案：A。\n理由：感觉应该是对的。"
+    }
+  ]
+}

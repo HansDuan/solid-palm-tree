@@ -1,0 +1,22 @@
+node_modules/
+.next/
+out/
+.env
+.env.local
+*.log
+.DS_Store
+eval/report.json
+eval/ocr-report.json
+eval/ocr-report.md
+data/*.db
+data/snapshot.json
+
+# 隧道守护：SSH 私钥 + 当前公网地址（勿提交）
+.run/
+
+# LearnBuddy 项目记忆文件夹（含本地会话数据，勿提交）
+.workbuddy/
+
+# 临时/缓存碎片
+models.tmp.json
+*.tmp.json

@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ClassPilot 智课领航员</title>
+<link rel="stylesheet" href="/globals.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <h1>ClassPilot 智课领航员</h1>
+    <span class="slogan">教师说人话，AI 干重复活 —— 每份批改都带证据可申诉</span>
+    <span class="badge" id="mode">模型模式：加载中</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('grade', this)">批改工作台</button>
+    <button class="tab" onclick="switchTab('agent', this)">对话式入口（Agent）</button>
+  </div>
+
+  <div id="grade-pane">
+    <div class="card">
+      <div class="row">
+        <select id="assignment"></select>
+        <span class="muted">粘贴作业文本；后端解析由 C 同学负责</span>
+      </div>
+      <textarea id="text" rows="14">def binary_search(arr, target):
+    # 二分查找，返回下标，不存在返回 -1
+    left, right = 0, len(arr) - 1
+    while left <= right:
+        mid = (left + right) // 2
+        if arr[mid] == target:
+            return mid
+        elif arr[mid] < target:
+            left = mid + 1
+        else:
+            right = mid - 1
+    return -1
+# 时间复杂度 O(log n)，空间 O(1)</textarea>
+      <div class="row" style="margin-top:12px">
+        <button id="btn" onclick="doGrade()">开始批改</button>
+        <span class="muted">目标：30 秒内出结果，每个维度都带原文证据</span>
+      </div>
+      <div class="row" style="margin-top:10px;border-top:1px dashed rgba(13,21,38,.12);padding-top:12px">
+        <span class="muted">① 选文件 / 拍照（一次可多选，多页作业会合成一份答案再批改）：</span>
+        <input type="file" id="file" multiple accept=".txt,.md,.py,.js,.docx,.pdf,image/*">
+        <input type="file" id="cam" accept="image/*" capture="environment">
+      </div>
+      <div id="drop" style="margin-top:10px;border:2px dashed rgba(26,111,212,.35);border-radius:10px;padding:18px;text-align:center;color:#5f6a80;font-size:13px;background:rgba(26,111,212,.03)">
+        把作业照片拖到这里（<b>可多选</b>，客户端先压缩长边 ≤1600px，服务端再自动转正 + 二次压缩）
+      </div>
+      <div id="pending" class="row" style="flex-wrap:wrap;gap:8px;margin-top:10px"></div>
+      <div class="row" style="margin-top:10px">
+        <button onclick="doUpload()">② 上传并批改</button>
+        <button onclick="doOcr()">只转文字（不批改）</button>
+        <span class="muted" id="uphint">支持 txt / md / py / docx / pdf* 与 jpg、png；单次最多 6 个文件</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row">
+        <span class="name">② 上传标准答案（答案键）</span>
+        <span class="muted" id="keyStatus">检测中…</span>
+      </div>
+      <div class="row">
+        <select id="keyAssignment"></select>
+        <span class="muted">选择要设答案的作业</span>
+      </div>
+      <textarea id="keyText" rows="5" placeholder="粘贴标准答案，例如：1.B 2.C 3.A 4.B  或  解：x1=3, x2=2  （也可上传写了答案的照片）"></textarea>
+      <div class="row" style="margin-top:8px">
+        <input type="file" id="keyFile" accept=".txt,.md,.py,.pdf,image/*">
+        <button onclick="saveKey()">保存标准答案</button>
+        <button onclick="clearKey()">清除</button>
+        <span class="muted" id="keyHint">保存后，该作业的所有批改都会对照此答案进行——客观题逐项核对，准确率更高</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <span class="name">④ 选择题批量批改（秒级 · 确定性对照 · 不依赖模型）</span>
+      </div>
+      <div class="row">
+        <select id="cbAssignment"></select>
+        <span class="muted">选作业自动带入它的标准答案（也可手填）</span>
+      </div>
+      <div class="row">
+        <span class="muted">标准答案键：</span>
+        <input type="file" id="cbKeyFile" accept=".txt,.md,image/*">
+      </div>
+      <textarea id="cbKey" rows="2" placeholder="例如：1.B 2.C 3.A 4.B"></textarea>
+      <div class="muted" style="margin-top:4px">学生答案（每行一名学生，可带姓名）。支持写法：<code>张三: 1.B 2.C 3.A 4.B</code>、<code>张三: B C A B</code>（空格分隔）、<code>001,B,C,A,B</code>（逗号分隔）、<code>王五: 1B 2C 3A 4B</code>：</div>
+      <textarea id="cbStudents" rows="8" placeholder="张三: 1.B 2.C 3.A 4.B&#10;李四: 1.B 2.C 3.B 4.A&#10;王五: 1.A 2.C 3.A 4.B"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button onclick="runChoiceBatch()">批量批改选择题</button>
+        <span class="muted" id="cbHint">逐题比对，自动出每人得分、班级平均分与每题正确率</span>
+      </div>
+      <div id="cbOut"></div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <span class="muted">③ 批量批改整个班（30 份 · 并发 3 · 单份失败自动重试 · 进度可查）：</span>
+        <button onclick="startBatch()">开始批量批改</button>
+        <button onclick="cancelBatchNow()">取消任务</button>
+      </div>
+      <div id="batchBar" style="margin-top:10px;height:8px;border-radius:4px;background:rgba(13,21,38,.08);overflow:hidden">
+        <div id="batchFill" style="height:100%;width:0%;background:#1a6fd4"></div>
+      </div>
+      <div id="batchInfo" class="muted" style="margin-top:8px">未开始</div>
+      <div id="batchOut"></div>
+    </div>
+    <div id="result"></div>
+  </div>
+
+  <div id="agent-pane" style="display:none">
+    <div class="card">
+      <h3>演示指令（点击即用）</h3>
+      <div class="row" id="cmds"></div>
+    </div>
+    <div class="card" id="chatBox"></div>
+    <div class="card">
+      <div class="row">
+        <input class="chat" id="msg" type="text" placeholder="例如：批改这次提交的作业" onkeydown="if(event.key==='Enter')send()">
+        <button onclick="send()">发送</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const COMMANDS = ['批改这次提交的作业','生成这次作业的学情分析','谁这周状态下滑？列个预警名单','给分数最低的 5 个学生生成个性化练习'];
+const escapes = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+fetch('/api/mode').then(r=>r.json()).then(d=>document.getElementById('mode').textContent='模型模式：'+(d.mode==='REAL'?'混元真实模型':'MOCK（无 Key 兜底）'));
+fetch('/api/grade').then(r=>r.json()).then(d=>{
+  document.getElementById('assignment').innerHTML = d.assignments.map(a=>`<option value="${a.id}">${a.id} · ${a.title}</option>`).join('');
+  document.getElementById('keyAssignment').innerHTML = d.assignments.map(a=>`<option value="${a.id}">${a.id} · ${a.title}${a.answerKey?'（已有答案键）':''}</option>`).join('');
+  document.getElementById('cbAssignment').innerHTML = d.assignments.map(a=>`<option value="${a.id}">${a.id} · ${a.title}${a.answerKey?'（含答案键）':''}</option>`).join('');
+  loadKeyStatus();
+  prefillCbKey();
+});
+document.getElementById('assignment').addEventListener('change', loadKeyStatus);
+document.getElementById('cbAssignment').addEventListener('change', prefillCbKey);
+
+function prefillCbKey(){
+  const aid = document.getElementById('cbAssignment').value;
+  fetch('/api/grade').then(r=>r.json()).then(d=>{
+    const a = d.assignments.find(x=>x.id===aid);
+    if(a && a.answerKey && a.answerKey.text) document.getElementById('cbKey').value = a.answerKey.text;
+  });
+}
+document.getElementById('cmds').innerHTML = COMMANDS.map(c=>`<span class="chip" style="cursor:pointer" onclick="send('${c}')">${c}</span>`).join('');
+
+function switchTab(t, el){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('grade-pane').style.display = t==='grade'?'':'none';
+  document.getElementById('agent-pane').style.display = t==='agent'?'':'none';
+}
+
+/* ── 批量批改：启动 → 轮询进度 → 分布汇总 ── */
+let batchTimer = null, batchId = null;
+
+async function startBatch(){
+  if(batchTimer){ clearInterval(batchTimer); batchTimer = null; }
+  const res = await postJSON('/api/grade/batch', { assignmentId: document.getElementById('assignment').value });
+  if(!res.ok){ document.getElementById('batchInfo').textContent = '启动失败：' + res.error; return; }
+  batchId = res.taskId;
+  document.getElementById('batchOut').innerHTML = '';
+  batchTimer = setInterval(pollBatch, 300);
+  pollBatch();
+}
+
+async function cancelBatchNow(){
+  if(!batchId){ alert('还没有正在跑的任务'); return; }
+  await postJSON('/api/grade/batch', { action: 'cancel', id: batchId });
+}
+
+async function pollBatch(){
+  if(!batchId) return;
+  const res = await fetch(`/api/grade/batch?id=${batchId}&full=1`).then(r=>r.json()).catch(()=>null);
+  if(!res || !res.ok){ document.getElementById('batchInfo').textContent = '查询失败'; return; }
+  const t = res.task;
+  document.getElementById('batchFill').style.width = t.progress + '%';
+  document.getElementById('batchInfo').textContent =
+    `${t.status === 'running' ? '批改中' : t.status === 'done' ? '已完成' : t.status}：${t.done}/${t.total} · 成功 ${t.ok} · 失败 ${t.failed} · ${(t.elapsedMs/1000).toFixed(1)}s · 并发 ${t.concurrency}`;
+
+  if(t.status !== 'running'){
+    clearInterval(batchTimer); batchTimer = null;
+    const s = res.summary || {};
+    const dist = (s.distribution||[]).map(d=>`<span class="chip">${d.range} 分：${d.count} 人</span>`).join('');
+    const failedRows = (t.results||[]).filter(r=>r && !r.ok)
+      .map(r=>`<div class="muted">· ${escapes(r.studentName||r.studentId||'#')} 失败：${escapes(r.error)}</div>`).join('');
+    const top = (t.results||[]).filter(r=>r&&r.ok).slice(0,5);
+    document.getElementById('batchOut').innerHTML = `
+      <div class="card"><h3>批量结果（${s.count||0} 份）</h3>
+        <div class="row"><span class="chip">平均 ${s.avg}</span><span class="chip">中位 ${s.median}</span>
+        <span class="chip">最高 ${s.highest}</span><span class="chip">最低 ${s.lowest}</span>
+        <span class="chip">及格率 ${Math.round((s.passRate||0)*100)}%</span>
+        <span class="chip">待复核维度 ${s.lowConfidenceTotal||0}</span></div>
+        <div class="row" style="margin-top:8px">${dist}</div>
+        <table style="margin-top:10px"><tr><th>学生</th><th>总分</th><th>待复核维度</th></tr>
+          ${top.map(r=>`<tr><td>${escapes(r.studentName||r.studentId)}</td><td>${r.total_score}</td><td>${r.lowConfidence}</td></tr>`).join('')}
+        </table>
+        <div class="muted">（节选前 5 行，完整成绩见 /api/results）</div>
+        ${failedRows ? `<div style="margin-top:8px"><div class="name">失败明细</div>${failedRows}</div>` : ''}
+      </div>`;
+    batchId = null;
+  }
+}
+
+function withTimeout(ms, promise){
+  return Promise.race([
+    promise,
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error(`请求超过 ${Math.round(ms/1000)} 秒仍未返回`)), ms)),
+  ]);
+}
+
+// 异步批改：先提交拿 jobId，再轮询结果。
+// 原因：hy3 + v4 prompt 单份主观题耗时 45~130s，同步等待会被浏览器/免费隧道（≈120s）掐断。
+async function doGrade(){
+  const btn = document.getElementById('btn');
+  const box = document.getElementById('result');
+  btn.disabled = true; btn.textContent = '已提交，等待 AI…';
+  box.innerHTML = '<div class="card"><div class="muted">批改任务已提交，AI 正在批阅（通常 45~130 秒），页面会每 2.5 秒自动刷新进度，请勿重复点击。</div></div>';
+  const started = Date.now();
+  let res;
+  try{
+    const sub = await fetch('/api/grade/async',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({assignmentId: document.getElementById('assignment').value, text: document.getElementById('text').value})
+    }).then(r=>r.json());
+    if(!sub.ok) throw new Error(sub.error || '提交失败');
+    for(;;){
+      await new Promise(r=>setTimeout(r,2500));
+      const st = await fetch('/api/grade/async?id=' + sub.jobId).then(r=>r.json());
+      if(!st.ok) throw new Error(st.error || '任务丢失');
+      const sec = Math.round((Date.now()-started)/1000);
+      btn.textContent = st.status==='running' ? `AI 批改中… ${sec}s` : '开始批改';
+      if(st.status==='running'){
+        box.innerHTML = `<div class="card"><div class="muted">AI 正在批阅… 已等待 ${sec} 秒（模型 hy3 · REAL 模式）</div></div>`;
+      }else if(st.status==='done'){
+        res = st; break;
+      }else{
+        res = {ok:false, error: st.error || '批改任务失败'}; break;
+      }
+      if(Date.now()-started > 6*60*1000){ res = {ok:false, error:`已等待 ${sec} 秒仍未完成，服务端可能负载过高`}; break; }
+    }
+  }catch(e){
+    res = { ok:false, error: e.message + '。服务端仍在后台计算，可稍后重试。' };
+  }
+  btn.disabled = false; btn.textContent = '开始批改';
+  if(!res.ok){ box.innerHTML = `<div class="card">出错：${escapes(res.error)}</div>`; return; }
+  renderResult(res);
+}
+
+/* ── 标准答案（答案键）上传 ── */
+async function loadKeyStatus(){
+  const aid = document.getElementById('assignment').value;
+  const a = (await fetch('/api/grade').then(r=>r.json())).assignments.find(x=>x.id===aid);
+  const has = !!(a && a.answerKey);
+  document.getElementById('keyStatus').innerHTML = has
+    ? '<span class="tag-low" style="background:rgba(26,130,90,.15);color:#1a825a">已设标准答案 ✅ 后续批改将对照该答案</span>'
+    : '<span class="tag-low">未设标准答案（按通用 rubric 批改）</span>';
+  if(has && a.answerKey.text) document.getElementById('keyText').value = a.answerKey.text.slice(0,500);
+}
+
+async function saveKey(){
+  const aid = document.getElementById('keyAssignment').value;
+  const text = document.getElementById('keyText').value.trim();
+  const fileEl = document.getElementById('keyFile');
+  const hint = document.getElementById('keyHint');
+  hint.textContent = '保存中…';
+  let payload = { assignmentId: aid, text };
+  if(!text && fileEl.files.length){
+    const f = fileEl.files[0];
+    const dataUrl = await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(f);});
+    payload = { assignmentId: aid, files: [{ filename: f.name, contentBase64: dataUrl.split(',')[1] }] };
+  }
+  const res = await postJSON('/api/answerkey', payload);
+  if(!res.ok){ hint.textContent = '失败：' + res.error; return; }
+  hint.textContent = `已保存（${res.charCount} 字 · 模式 ${res.keyMode}）· ${res.message}`;
+  await loadKeyStatus();
+  // 同步下拉，标记已有答案键
+  document.getElementById('keyAssignment').innerHTML = (await fetch('/api/grade').then(r=>r.json())).assignments
+    .map(a=>`<option value="${a.id}">${a.id} · ${a.title}${a.answerKey?'（已有答案键）':''}</option>`).join('');
+}
+
+async function clearKey(){
+  document.getElementById('keyText').value='';
+  document.getElementById('keyHint').textContent='已清空输入框（如需彻底移除，可在服务端调用 setAnswerKey(null)）。';
+}
+
+/* ── 选择题批量批改 ── */
+async function runChoiceBatch(){
+  const aid = document.getElementById('cbAssignment').value;
+  const keyText = document.getElementById('cbKey').value.trim();
+  const students = document.getElementById('cbStudents').value.trim();
+  const hint = document.getElementById('cbHint');
+  const keyFileEl = document.getElementById('cbKeyFile');
+  if(!keyText && !keyFileEl.files.length){ hint.textContent='请先填写标准答案键（或上传答案键照片）'; return; }
+  if(!students){ hint.textContent='请粘贴学生答案（每行一名学生）'; return; }
+  hint.textContent='批改中…';
+  let payload = { assignmentId: aid, submissionsText: students };
+  if(keyText){ payload.key = keyText; }
+  else if(keyFileEl.files.length){
+    const f = keyFileEl.files[0];
+    const dataUrl = await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(f);});
+    payload.keyFiles = [{ filename: f.name, contentBase64: dataUrl.split(',')[1] }];
+  }
+  const res = await postJSON('/api/grade/choice-batch', payload);
+  if(!res.ok){ hint.textContent='失败：'+res.error; return; }
+  hint.textContent = `完成 ${res.count} 人 · 平均 ${res.avg} 分 · 及格率 ${Math.round(res.passRate*100)}%`;
+  renderChoiceBatch(res);
+}
+
+function renderChoiceBatch(res){
+  const q = (res.questionStats||[]).map(s=>`<span class="chip">第${s.q}题 正确率 ${Math.round(s.correctRate*100)}%${s.wrongCount?`（${s.wrongCount}人错）`:''}</span>`).join('');
+  const rows = (res.results||[]).map(r=>{
+    const pq = r.perQuestion.map(p=>`<span style="color:${p.ok?'#1a825a':'#c0392b'}">${p.q}.${p.got||'—'}${p.ok?'✓':'✗'}</span>`).join(' ');
+    return `<tr><td>${escapes(r.name)}</td><td><b>${r.score}</b>/${res.totalPoints}</td><td>${r.correct}/${r.total}</td><td style="font-size:12px">${pq}</td></tr>`;
+  }).join('');
+  document.getElementById('cbOut').innerHTML = `
+    <div class="card"><h3>班级概览（${res.count} 人）</h3>
+      <div class="row"><span class="chip">平均 ${res.avg}</span><span class="chip">最高 ${res.highest}</span><span class="chip">最低 ${res.lowest}</span><span class="chip">及格率 ${Math.round(res.passRate*100)}%</span><span class="chip">每题 ${res.perQuestionPoints} 分</span></div>
+      <div class="row" style="margin-top:8px">${q}</div>
+    </div>
+    <div class="card"><h3>逐人得分（绿✓对 / 红✗错）</h3>
+      <table><tr><th>学生</th><th>得分</th><th>正确/总</th><th>逐题</th></tr>${rows}</table>
+    </div>`;
+}
+
+/* ── 多文件上传：压缩 + 待上传列表 + 分页结果 ── */
+const MAX_FILES = 6;
+let pending = [];   // [{name, dataUrl, b64, kb, kind}]
+
+const drop = document.getElementById('drop');
+['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.style.background='rgba(26,111,212,.1)'; }));
+['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.style.background='rgba(26,111,212,.03)'; }));
+drop.addEventListener('drop', e => { e.preventDefault(); if(e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
+document.getElementById('file').addEventListener('change', e => addFiles(e.target.files));
+document.getElementById('cam').addEventListener('change', e => addFiles(e.target.files));
+
+function isImageFile(file){ return file.type.startsWith('image/') || /\.(jpe?g|png|webp|bmp)$/i.test(file.name); }
+
+async function addFiles(fileList){
+  const files = Array.from(fileList || []);
+  for(const f of files){
+    if(pending.length >= MAX_FILES){ alert(`一次最多 ${MAX_FILES} 个文件，多余的请分批上传`); break; }
+    const slot = { name: f.name, kind: isImageFile(f) ? 'image' : 'file' };
+    pending.push(slot);
+    renderPending();
+    if(slot.kind === 'image'){
+      const c = await compressImage(f);
+      const dataUrl = (c && c.dataUrl.length < 8*1024*1024) ? c.dataUrl
+        : await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(f);});
+      slot.dataUrl = dataUrl;
+      slot.b64 = dataUrl.split(',')[1];
+      slot.name = (c && c.dataUrl.length < 8*1024*1024) ? c.name : f.name;
+    } else {
+      const dataUrl = await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(f);});
+      slot.dataUrl = dataUrl; slot.b64 = dataUrl.split(',')[1];
+    }
+    slot.kb = Math.round((slot.b64.length * 3) / 4 / 1024);
+    renderPending();
+  }
+  document.getElementById('file').value = '';
+  document.getElementById('cam').value = '';
+}
+
+function renderPending(){
+  const box = document.getElementById('pending');
+  if(!pending.length){ box.innerHTML = ''; document.getElementById('uphint').textContent = '支持 txt / md / py / docx / pdf* 与 jpg、png；单次最多 6 个文件'; return; }
+  const totalKb = pending.reduce((s,p)=>s+(p.kb||0),0);
+  document.getElementById('uphint').textContent = `已选 ${pending.length} 个文件 · 合计 ${totalKb}KB`;
+  box.innerHTML = pending.map((p,i)=>`
+    <span class="chip">${p.kb===undefined?'处理中…':''}
+      ${p.kind==='image'?'📷':'📄'} ${escapes(p.name)}${p.kb!==undefined?` · ${p.kb}KB`:''}
+      <b style="cursor:pointer;margin-left:6px" onclick="removePending(${i})">✕</b>
+    </span>`).join('');
+}
+
+function removePending(i){ pending.splice(i,1); renderPending(); }
+
+function buildPayload(){
+  return {
+    assignmentId: document.getElementById('assignment').value,
+    studentId: 'stu01', studentName: '演示学生',
+    files: pending.map(p => ({ filename: p.name, contentBase64: p.b64 })),
+  };
+}
+
+async function postJSON(url, payload){
+  const t0 = performance.now();
+  const res = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(r=>r.json());
+  res._clientMs = Math.round(performance.now() - t0);
+  return res;
+}
+
+function warningHtml(warnings){
+  if(!warnings?.length) return '';
+  return `<div class="card"><h3>处理提示</h3>${warnings.map(w=>`<div class="muted">· ${escapes(w)}</div>`).join('')}</div>`;
+}
+
+async function doUpload(){
+  if(!pending.length){ alert('先选文件或照片，也可以直接把照片拖进来'); return; }
+  if(pending.some(p=>p.b64===undefined)){ alert('图片还在压缩中，请稍等一秒'); return; }
+  const nImg = pending.filter(p=>p.kind==='image').length;
+  document.getElementById('result').innerHTML =
+    `<div class="card">正在${nImg?`识别 ${nImg} 张作业照片并`:'解析文件并'}批改…（多页会先合成完整答案）</div>`;
+
+  const res = await postJSON('/api/upload', buildPayload());
+  if(!res.ok){
+    document.getElementById('result').innerHTML = `<div class="card">出错：${escapes(res.error)}</div>` + warningHtml(res.warnings);
+    return;
+  }
+  const images = pending.filter(p=>p.kind==='image');
+  let head = `<div class="card"><b>已${nImg?'识别':'解析'}：</b>${escapes(pending.map(p=>p.name).join(' + '))}
+    · ${res.charCount} 字 · 共 ${nImg?`${nImg} 页 / `:''}${(res.elapsedMs/1000).toFixed(1)}s · 已入库（${escapes(res.submissionId)}）</div>`;
+  head += warningHtml(res.warnings);
+
+  if(nImg){
+    const pagesHtml = (res.pages||[]).map(p=>{
+      const img = images.find(x=>x.name===p.filename) || images[p.index-1];
+      const thumb = img?.dataUrl ? `<img src="${img.dataUrl}" style="max-width:180px;border:1px solid rgba(13,21,38,.15);border-radius:8px">` : '';
+      const saved = p.meta?.savedPct ? ` · 预处理压缩 ${p.meta.savedPct}%（${Math.round(p.meta.beforeBytes/1024)}KB→${Math.round(p.meta.afterBytes/1024)}KB）` : '';
+      return `<div class="dim"><div><span class="name">第 ${p.index} 页 · ${escapes(p.filename)}</span>
+        <span class="meta">${p.error ? '识别失败' : `${(p.elapsedMs/1000).toFixed(1)}s${saved}`}</span></div>
+        ${thumb}
+        <div class="evidence">${escapes(p.error || p.text || '（无内容）')}</div></div>`;
+    }).join('');
+    head += `<div class="card"><h3>① AI 转录结果（可人工校对 · ${res.mockTranscript?'当前为 MOCK 识别':'混元 vision'}）</h3>
+      ${pagesHtml}
+      <div style="margin-top:12px"><div class="name">合并后的完整答案</div></div>
+      <textarea id="transcript" rows="8">${escapes(res.transcript || '')}</textarea>
+      <div class="row"><button onclick="regrade()">② 校对后重新批改</button>
+      <span class="muted">识别不佳时可在此修正再批改 —— 这正是我们「人机协同」的降级方案</span></div></div>`;
+    head += `<div class="card"><h3>③ 批改结果</h3>`+ dimList(res.result) +`</div>`;
+    document.getElementById('result').innerHTML = head;
+    document.getElementById('text').value = res.transcript || '';
+    return;
+  }
+  document.getElementById('result').innerHTML = head + resultHtml(res.result, res.elapsedMs);
+}
+
+async function doOcr(){
+  if(!pending.length){ alert('先选作业照片'); return; }
+  document.getElementById('result').innerHTML = `<div class="card">正在转录…</div>`;
+  const res = await postJSON('/api/ocr', { files: pending.map(p=>({filename:p.name, contentBase64:p.b64})) });
+  if(!res.ok){ document.getElementById('result').innerHTML = `<div class="card">出错：${escapes(res.error)}</div>`; return; }
+  const s = res.stats || {};
+  document.getElementById('result').innerHTML =
+    `<div class="card"><h3>转录完成（${res.mock?'MOCK':'混元 vision'}）</h3>
+      <div class="row"><span class="chip">${s.imagePages||0} 页照片</span><span class="chip">${res.elapsedMs} ms</span>
+      <span class="chip">${s.charCount||0} 字</span><span class="chip">并发 2 / 上限 ${MAX_FILES} 页</span></div></div>` +
+    warningHtml(res.warnings) +
+    `<div class="card"><textarea rows="14">${escapes(res.transcript || '')}</textarea></div>`;
+}
+
+function compressImage(file, maxEdge = 1600, quality = 0.85){
+  return new Promise((resolve) => {
+    if(!file.type.startsWith('image/')) return resolve(null);
+    const img = new Image();
+    const fr = new FileReader();
+    fr.onload = () => { img.src = fr.result; };
+    img.onload = () => {
+      const scale = Math.min(1, maxEdge / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);   // 白底，避免透明转 jpeg 发黑
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      resolve({ dataUrl: c.toDataURL('image/jpeg', quality), name: file.name.replace(/\.\w+$/, '.jpg') });
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+function dimList(r){
+  return r.dimensions.map(d=>`<div class="dim"><div><span class="name">${escapes(d.name)}</span>
+    <span class="meta">${d.score} / ${d.max}</span>
+    ${d.confidence==='low'?'<span class="tag-low">待复核</span>':''}</div>
+    <div class="evidence">原文证据：${escapes(d.evidence)}</div></div>`).join('');
+}
+
+async function regrade(){
+  const text = document.getElementById('transcript').value;
+  const box = document.getElementById('result');
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = '重新批改中…';
+  box.appendChild(card);
+  // 同样走异步任务 + 轮询，避免 45~130s 的耗时请求被浏览器/隧道掐断
+  try{
+    const sub = await fetch('/api/grade/async',{method:'POST',headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({assignmentId: document.getElementById('assignment').value, text})}).then(r=>r.json());
+    if(!sub.ok) throw new Error(sub.error || '提交失败');
+    for(;;){
+      await new Promise(r=>setTimeout(r,2500));
+      const st = await fetch('/api/grade/async?id=' + sub.jobId).then(r=>r.json());
+      if(!st.ok) throw new Error(st.error || '任务丢失');
+      if(st.status==='running'){
+        card.innerHTML = `重新批改中… 已等待 ${st.elapsedMs ? Math.round(st.elapsedMs/1000) : 0} 秒`;
+      }else if(st.status==='done'){
+        const r = st.result;
+        card.innerHTML = `<b>③ 校对后的批改结果</b>
+          <div class="score" style="font-size:32px">${r.total_score}</div>
+          <div class="msg">${escapes(r.comment)}</div>` + dimList(r);
+        break;
+      }else{
+        card.textContent = '重新批改失败：' + (st.error || '未知错误');
+        break;
+      }
+    }
+  }catch(e){
+    card.textContent = '重新批改失败：' + e.message;
+  }
+}
+
+function renderResult(res){ document.getElementById('result').innerHTML = resultHtml(res.result, res.elapsedMs); }
+
+function resultHtml(r, elapsedMs = 0){
+  const keyBadge = r.key_match
+    ? `<div class="muted" style="margin-top:6px">对照标准答案：<b>${keyMatchLabel(r.key_match)}</b>${r.match_detail?` · ${escapes(r.match_detail)}`:''}</div>`
+    : '';
+  return `
+  <div class="grid2">
+    <div class="card"><h3>总分</h3>
+      <div class="score">${r.total_score}</div>
+      <div class="muted">${elapsedMs ? `耗时 ${(elapsedMs / 1000).toFixed(1)} 秒 · ` : ''}模式 ${r.mode}${r.usedAnswerKey?' · 已用标准答案':''}</div>
+      ${keyBadge}
+      <div style="margin-top:12px"><div class="name">总体评语</div><div class="msg">${escapes(r.comment)}</div></div>
+    </div>
+    <div class="card"><h3>评分明细（证据链）</h3>
+      ${r.dimensions.map(d=>`<div class="dim"><div><span class="name">${escapes(d.name)}</span>
+        <span class="meta">${d.score} / ${d.max}</span>
+        ${d.confidence==='low'?'<span class="tag-low">待复核</span>':''}</div>
+        <div class="evidence">原文证据：${escapes(d.evidence)}</div>
+        <div class="muted">${escapes(d.reason)}</div></div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function keyMatchLabel(m){
+  return m==='full'?'完全吻合 ✅':m==='equivalent'?'方法不同但等价正确 🔄':m==='partial'?'部分吻合 ⚠️':'不一致 ❌';
+}
+
+async function send(msg){
+  const content = msg || document.getElementById('msg').value;
+  if(!content.trim()) return;
+  document.getElementById('msg').value='';
+  push('user', content);
+  const res = await fetch('/api/agent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:content})}).then(r=>r.json());
+  push('ai', res.reply || res.error, res.data);
+}
+
+function push(role, content, data){
+  const box = document.getElementById('chatBox');
+  let extra = '';
+  if(data?.distribution) extra = `<table><tr><th>维度</th><th>平均分</th><th>得分率</th></tr>${
+    data.dimensions.map(d=>`<tr><td>${escapes(d.name)}</td><td>${d.avg}/${d.max}</td><td>${(d.rate*100).toFixed(0)}%</td></tr>`).join('')}</table>
+    <div class="row"><span class="chip">平均分 ${data.avg}</span><span class="chip">最高 ${data.highest}</span><span class="chip">最低 ${data.lowest}</span><span class="chip">待复核 ${data.lowConfidence} 份</span></div>`;
+  if(data?.students) extra = `<table><tr><th>学生</th><th>本次</th><th>上次</th><th>变化</th><th>等级</th></tr>${
+    data.students.slice(0,8).map(s=>`<tr><td>${escapes(s.name)}</td><td>${s.score}</td><td>${s.prev}</td><td>${s.drop>0?'↓'+s.drop:'↑'+(-s.drop)}</td><td>${s.level}</td></tr>`).join('')}</table>`;
+  if(data?.practices) extra = data.practices.map(p=>`<div class="dim"><div><span class="name">${escapes(p.name)}</span>
+      <span class="meta">${p.score} 分 · 薄弱点：${escapes(p.weakPoint)}</span></div>
+      ${p.items.map(i=>`<div class="muted">· ${escapes(i)}</div>`).join('')}</div>`).join('');
+  box.innerHTML += `<div class="${role==='user'?'msg user':'msg'}"><b>${role==='user'?'教师：':'ClassPilot：'}</b> ${escapes(content)}</div>${extra}`;
+  box.scrollIntoView({behavior:'smooth',block:'end'});
+}
+</script>
+</body>
+</html>

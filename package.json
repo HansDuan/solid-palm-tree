@@ -1,0 +1,25 @@
+{
+  "name": "classpilot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "eval": "node eval/run_eval.mjs",
+    "eval:ocr": "node eval/run_eval_ocr.mjs",
+    "ocr:samples": "node eval/make_ocr_samples.mjs",
+    "key": "node scripts/set-key.mjs",
+    "demo": "node demo/server.mjs",
+    "smoke": "node eval/smoke_tools.mjs",
+    "smoke:db": "node eval/smoke_db.mjs",
+    "smoke:batch": "node eval/smoke_batch.mjs",
+    "seed": "node lib/store/bootstrap.js"
+  },
+  "dependencies": {
+    "next": "15.1.6",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  }
+}
