@@ -289,6 +289,11 @@ const server = createServer(async (req, res) => {
       });
     } else if (url.pathname === '/api/health') {
       json(res, { ok: true, mode: runtimeConfig(), memory: heapSnapshot(), maxPages: MAX_PAGES, storage: storageMode() });
+    } else if (url.pathname === '/api/feedback' && req.method === 'GET') {
+      // 教师复核回显：前端刷新后拉取某提交的全部反馈（渲染「已复核」标记）
+      const submissionId = url.searchParams.get('submissionId');
+      if (!submissionId) return json(res, { ok: false, error: 'submissionId 必填' }, 400);
+      json(res, { ok: true, submissionId, feedback: listFeedback(submissionId) });
     } else if (url.pathname === '/api/feedback' && req.method === 'POST') {
       const { submissionId, dimension, teacherScore, comment } = await body(req);
       const id = saveTeacherFeedback({ submissionId, dimension, teacherScore, comment });
