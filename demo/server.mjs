@@ -78,7 +78,7 @@ const server = createServer(async (req, res) => {
       json(res, { ok: true, elapsedMs: Date.now() - t0, assignment, result });
     } else if (url.pathname === '/api/grade/async' && req.method === 'POST') {
       // 提交一份批改任务，立刻返回 jobId（不等模型），由前端轮询取结果
-      const { text, assignmentId = 'A1', studentId, studentName } = await body(req);
+      const { text, assignmentId = 'A1' } = await body(req);
       const assignment = listAssignments().find((a) => a.id === assignmentId) || listAssignments()[0];
       const id = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       singleJobs.set(id, { id, status: 'running', startedAt: Date.now() });
@@ -86,17 +86,7 @@ const server = createServer(async (req, res) => {
         const t0 = Date.now();
         try {
           const result = await gradeAssignment({ assignment, studentText: text });
-          // 异步批改完成即落一条真实提交（与 /api/upload 行为一致），产出稳定 submissionId 供教师复核闭环使用
-          const sub = saveSubmission({
-            assignmentId: assignment.id,
-            studentId: studentId || ('stu_local_' + id),
-            studentName: studentName || '',
-            text: text || '',
-            source: 'text',
-            pageCount: 1,
-          });
-          saveGradingResult({ submissionId: sub.id, assignmentId: assignment.id, studentId: sub.studentId, result });
-          singleJobs.set(id, { id, status: 'done', startedAt: t0, elapsedMs: Date.now() - t0, assignment, result, submissionId: sub.id });
+          singleJobs.set(id, { id, status: 'done', startedAt: t0, elapsedMs: Date.now() - t0, assignment, result });
         } catch (e) {
           singleJobs.set(id, { id, status: 'error', startedAt: t0, elapsedMs: Date.now() - t0, error: e.message || String(e) });
         }
@@ -110,7 +100,6 @@ const server = createServer(async (req, res) => {
         ok: true,
         id: job.id,
         status: job.status,
-        submissionId: job.submissionId,
         elapsedMs: job.elapsedMs ?? Date.now() - job.startedAt,
         assignment: job.assignment,
         result: job.result,
@@ -161,9 +150,46 @@ const server = createServer(async (req, res) => {
       // 学情看板：复用既有班级报告工具（C 同学接入真实库后可原地替换实现）
       const assignmentId = url.searchParams.get('assignmentId') || listAssignments()[0]?.id;
       const report = await tool_get_class_report({ assignmentId });
-      json(res, { ok: true, ...report });
+      /* C 同学 2026-09-25 兼容层：把后端字段对齐前端看板（src/views/Dashboard.vue）
+         - distribution: analytics 输出 {bucket,count}，前端读 x.range → 补 range
+         - errored / erroredNames / lowConfidenceNames：前端预警名单需要
+         - submissionCount：提交总数（含未批改） */
+      let submissionCount = 0;
+      let errored = 0;
+      const erroredNames = [];
+      try {
+        const db2 = getDb();
+        if (db2) {
+          const subs = db2.all('SELECT id, student_id, raw_text FROM submissions WHERE assignment_id = ?', [assignmentId]);
+          submissionCount = subs.length;
+          // C 修复 2026-09-25：批量批改落库的 submission_id 是 batch:xxx 合成号，
+          // 与 submissions.id 对不上 → 按 student_id 对账（batch.js 落库时 student_id 是真实 ID），只认 REAL
+          const done = new Set(
+            db2.all("SELECT student_id FROM grading_results WHERE assignment_id = ? AND mode = 'REAL'", [assignmentId]).map((r) => r.student_id)
+          );
+          const names2 = new Map(db2.all('SELECT id, name FROM students').map((r) => [r.id, r.name]));
+          for (const s of subs) {
+            if (!done.has(s.student_id)) { errored++; erroredNames.push(names2.get(s.student_id) || s.student_id); }
+          }
+        }
+      } catch { /* 仓储不可用时忽略，字段保持默认 */ }
+      const lowConfidenceNames = (report.results || [])
+        .filter((r) => (r.dimensions || []).some((d) => d.confidence === 'low'))
+        .map((r) => r.name);
+      json(res, {
+        ok: true,
+        ...report,
+        patch: 'c-2026-09-25-errored-fix', // 版本指纹：出现此字段 = 新代码在跑
+        distribution: (report.distribution || []).map((x) => ({ ...x, range: x.range || x.bucket || '' })),
+        // C 补 2026-09-25：前端雷达图（Dashboard.vue）读 x.name / x.max / x.avg，B 的报告输出字段名是 dimension
+        dimensions: (report.dimensions || []).map((x) => ({ ...x, name: x.name || x.dimension })),
+        submissionCount,
+        errored, // 新代码：以本地按 student_id 对账的结果为准（B 的 report 无此字段，原优先级写法易踩坑）
+        erroredNames, // 同上
+        lowConfidenceNames: report.lowConfidenceNames || lowConfidenceNames,
+      });
     } else if (url.pathname === '/api/plagiarism' && req.method === 'GET') {
-      // 临时查重：词袋 Jaccard 扫描（待 C 用真实相似度算法替换）
+      // 查重：C 同学的 TF-IDF + 余弦（analytics.js，纯函数、自检 14/14）——已接入真库
       const assignmentId = url.searchParams.get('assignmentId') || listAssignments()[0]?.id;
       const threshold = Number(url.searchParams.get('threshold')) || 0.5;
       const scan = await tool_scan_plagiarism({ assignmentId, threshold });
@@ -300,17 +326,13 @@ const server = createServer(async (req, res) => {
       });
     } else if (url.pathname === '/api/health') {
       json(res, { ok: true, mode: runtimeConfig(), memory: heapSnapshot(), maxPages: MAX_PAGES, storage: storageMode() });
-    } else if (url.pathname === '/api/feedback' && req.method === 'GET') {
-      // 教师复核回显：前端刷新后拉取某提交的全部反馈（渲染「已复核」标记）
-      const submissionId = url.searchParams.get('submissionId');
-      if (!submissionId) return json(res, { ok: false, error: 'submissionId 必填' }, 400);
-      json(res, { ok: true, submissionId, feedback: listFeedback(submissionId) });
     } else if (url.pathname === '/api/feedback' && req.method === 'POST') {
       const { submissionId, dimension, teacherScore, comment } = await body(req);
       const id = saveTeacherFeedback({ submissionId, dimension, teacherScore, comment });
       json(res, { ok: true, id, feedback: listFeedback(submissionId) });
     } else if (url.pathname === '/api/mode') {
-      json(res, { mode: process.env.HUNYUAN_API_KEY ? 'REAL' : 'MOCK', storage: storageMode() });
+      // C 补 2026-09-25：前端 ModeBadge.vue 要求 res.ok 为真才采纳 mode，原响应缺 ok → 徽标一直误判 MOCK
+      json(res, { ok: true, mode: process.env.HUNYUAN_API_KEY ? 'REAL' : 'MOCK', storage: storageMode() });
     } else if (url.pathname === '/api/answerkey' && req.method === 'POST') {
       // 教师上传标准答案（答案键）：文本直接存，图片先转录再存
       const b = await body(req);
