@@ -143,3 +143,27 @@ GET /api/feedback?submissionId=sub_stu01
 - **`tool_grade_assignment` 的 `studentId` bug 已修**（`s.id` → `s.studentId`）：修复前预警名单/批量批改结果里没有 `studentId`、REAL 结果落库 `student_id=NULL`。A 渲染卡片列表的 `key` 请用 `studentId`。
 - **新增 `GET /api/feedback`**（见 §2）。
 - 契约文档 §2.2 已同步补 feedback 双接口条目。
+
+---
+
+## 6. 前端联调两处必踩的坑（A v6 实测，9/25 已修）
+
+> 以下两处是 A 同学 v6 前端实测出来的真实 bug，根因分别在后端契约与前端取值，均已修复。给 C 同学对后端、给 A 同学对前端时请以此为准。
+
+### 6.1 `dimensions[].confidence` 是字符串 `"high"/"low"`，不是数值
+
+后端（REAL 经 `prompts.js` 约束、MOCK 经 `llm.js`/`key.js`/`parse.js`）**始终**返回字符串 `"high"` 或 `"low"`。
+❌ 之前的写法 `Number(d.confidence) < 0.7`：`Number("high")` = `NaN` → `NaN < 0.7` = `false`，**"建议复核"黄色角标永远不亮、低置信高亮永远不触发**。
+✅ 修正：`d.confidence === 'low'`（或 `d.confidence !== 'high'`）。
+涉及：`ResultPanel.vue` 的 `lowConfDims` / 角标 `v-if` / `confType`，以及 `grading.js` 的 `hasLowConfidence`。
+
+### 6.2 异步批改完成态现在回带真实 `submissionId`（修复前是根因）
+
+**根因（后端）**：旧版 `/api/grade/async` 完成态只返回 `result`，**不创建提交、不发 `submissionId`**。前端于是把本地记录 id（`r${Date.now()}_n`）当 `submissionId` 传给 feedback，而库里根本没有这条提交 → `GET /api/feedback` 查空、`POST /api/feedback` 写到一个不存在的提交上。
+**修复（后端，已在 `demo/server.mjs` 与 `app/api/grade/route.js` 两处补齐）**：异步（及同步）批改完成时调用 `saveSubmission` + `saveGradingResult`，产出真实 `submissionId`（`sub_xxx`），并在轮询 `GET /api/grade/async?id=` 完成态回带。
+**前端对应修正**：
+- `grading.js` 的 `startGrade` / `schedulePoll` 的 `done` 分支捕获 `rec.submissionId = res.submissionId`；`addDoneRecord` 接收 upload 回带的 `submissionId`。
+- `ResultPanel.vue` 的 `getFeedback` / `submitFeedback` 传 `props.rec.submissionId || props.rec.id`（兼容旧本地记录）。
+- MOCK（`src/api/mock.js`）的 `makeJob`/`jobStatus` 同步回带 `submissionId`，保证 `VITE_USE_MOCK=true` 时也能闭环。
+
+**联调验收口径**：异步批改完成后，前端应能从轮询结果拿到形如 `sub_xxxxxxxx` 的 `submissionId`；用它在 ResultPanel 复核改分，刷新后"已复核"标记仍应在（GET 能查回）。

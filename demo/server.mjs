@@ -78,7 +78,7 @@ const server = createServer(async (req, res) => {
       json(res, { ok: true, elapsedMs: Date.now() - t0, assignment, result });
     } else if (url.pathname === '/api/grade/async' && req.method === 'POST') {
       // 提交一份批改任务，立刻返回 jobId（不等模型），由前端轮询取结果
-      const { text, assignmentId = 'A1' } = await body(req);
+      const { text, assignmentId = 'A1', studentId, studentName } = await body(req);
       const assignment = listAssignments().find((a) => a.id === assignmentId) || listAssignments()[0];
       const id = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       singleJobs.set(id, { id, status: 'running', startedAt: Date.now() });
@@ -86,7 +86,17 @@ const server = createServer(async (req, res) => {
         const t0 = Date.now();
         try {
           const result = await gradeAssignment({ assignment, studentText: text });
-          singleJobs.set(id, { id, status: 'done', startedAt: t0, elapsedMs: Date.now() - t0, assignment, result });
+          // 异步批改完成即落一条真实提交（与 /api/upload 行为一致），产出稳定 submissionId 供教师复核闭环使用
+          const sub = saveSubmission({
+            assignmentId: assignment.id,
+            studentId: studentId || ('stu_local_' + id),
+            studentName: studentName || '',
+            text: text || '',
+            source: 'text',
+            pageCount: 1,
+          });
+          saveGradingResult({ submissionId: sub.id, assignmentId: assignment.id, studentId: sub.studentId, result });
+          singleJobs.set(id, { id, status: 'done', startedAt: t0, elapsedMs: Date.now() - t0, assignment, result, submissionId: sub.id });
         } catch (e) {
           singleJobs.set(id, { id, status: 'error', startedAt: t0, elapsedMs: Date.now() - t0, error: e.message || String(e) });
         }
@@ -100,6 +110,7 @@ const server = createServer(async (req, res) => {
         ok: true,
         id: job.id,
         status: job.status,
+        submissionId: job.submissionId,
         elapsedMs: job.elapsedMs ?? Date.now() - job.startedAt,
         assignment: job.assignment,
         result: job.result,
