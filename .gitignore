@@ -8,8 +8,11 @@ out/
 eval/report.json
 eval/ocr-report.json
 eval/ocr-report.md
-data/*.db
-data/snapshot.json
+# 数据目录整体忽略（SQLite 落库、快照等运行时数据）
+data/
+
+# 任何位置的 SQLite 数据库文件（防误提交）
+*.db
 
 # 隧道守护：SSH 私钥 + 当前公网地址（勿提交）
 .run/
