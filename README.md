@@ -13,7 +13,7 @@
 | ----------- | --------------------------------------------- | ----------------------- |
 | 开发语言        | JavaScript（Next.js 15 App Router，一体式）         | 一套语言一个仓库一次部署；4 天内沟通成本最低 |
 | 批改 pipeline | `lib/grading/`，纯 JS 模块，可整体平移到 Python 服务       | 与前端解耦，你和 C 同学互不阻塞       |
-| 模型          | **腾讯混元**（`hunyuan-turbos` / `hunyuan-vision`） | 合规唯一选项 + 腾讯生态叙事         |
+| 模型          | **腾讯混元**（`hy3` 文本 / `hy-vision-2.0-instruct` 视觉，TokenHub 网关） | 合规唯一选项 + 腾讯生态叙事 |
 | 演示兜底        | MOCK 模式（无 API Key 自动启用）                       | 今晚起全链路可演示，Key 到位即切真实链路  |
 | 数据          | `lib/store/memory.js` 内存虚拟班级（30 人）            | C 同学接 SQLite 时只需替换本文件实现 |
 
@@ -89,7 +89,7 @@ eval/                   测试集 samples.json + 评测脚本 + 自检脚本
 
 同一个 `POST /api/upload` 接口：
 
-- 传**单张**图片 → `hunyuan-vision` 转录 → 同一条证据链批改 → 入库
+- 传**单张**图片 → `hy-vision-2.0-instruct` 转录 → 同一条证据链批改 → 入库
 - 传**多张**（`files:[{filename, contentBase64}]` 或 multipart 重复 `file` 字段）→ 分页转录（并发 2）→ **合并成一份完整答案** → 再批改。一道大题写满两页不会被误判成「步骤不完整」
 
 返回里会多几个字段：`source: "image|file|mixed"`、`transcript`（合并后原文）、`pages[]`（每页耗时/预处理压缩率/错误）、`warnings[]`（空白页、单页失败等）。前端把 transcript 放进可编辑框，让老师校对后再点「重新批改」——这就是我们答辩要讲的**降级方案**，也是人机协同的落点。

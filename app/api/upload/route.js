@@ -6,7 +6,7 @@
  *  2. JSON 单文件：{assignmentId, studentId, studentName, filename, contentBase64}
  *  3. JSON 多文件：{assignmentId, studentId, studentName, files:[{filename, contentBase64}]}
  *
- * 图片走多模态：预处理 → hunyuan-vision 分页转录 → 合并 → 同一条证据链批改 pipeline
+ * 图片走多模态：预处理 → hy-vision-2.0-instruct 分页转录 → 合并 → 同一条证据链批改 pipeline
  */
 import { extractFromFiles } from '@/lib/parse/multi.js';
 import { saveSubmission, saveGradingResult } from '@/lib/store/repo.js';

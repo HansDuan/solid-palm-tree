@@ -42,9 +42,9 @@ curl -X POST $BASE/api/grade/batch -H 'Content-Type: application/json' \
 |---|---|---|---|
 | `HUNYUAN_API_KEY` | ✅ | 空 | 空则自动降级 MOCK。**只放环境变量，绝不进 Git** |
 | `HUNYUAN_BASE_URL` | | `https://tokenhub.tencentmaas.com/v1` | ⚠️ TokenHub 网关域名是 `tencentmaas.com`（非老的 `tencentcloudmaas.com`），鉴权头用 `x-api-key`（非 Bearer） |
-| `HUNYUAN_TEXT_MODEL` | | `hy4-preview` | 混元文本模型（TokenHub 模型广场确认存在） |
+| `HUNYUAN_TEXT_MODEL` | | `hy3` | 混元文本模型。**勿用 `hy4-preview`**（推理模型，token 全烧在 thinking 块、产不出批改 JSON，见对接契约 §0.1） |
 | `HUNYUAN_VISION_MODEL` | | `hy-vision-2.0-instruct` | 拍照批改用混元视觉模型；`hunyuan-t1-vision-20250916` 亦可 |
-| `HUNYUAN_TIMEOUT_MS` | | `120000` | 文本调用超时（hy4-preview 偏慢，建议 ≥120s） |
+| `HUNYUAN_TIMEOUT_MS` | | `120000` | 文本调用超时（演示/录屏场景建议保持 ≥120s，避免误判超时重试） |
 | `HUNYUAN_VISION_TIMEOUT_MS` | | `120000` | 视觉调用超时，手写大图别调小 |
 | `HUNYUAN_MAX_RETRY` | | `2` | 5xx/429 退避重试次数 |
 | `IMAGE_MAX_BYTES` | | `12582912` | 单张上传上限 |

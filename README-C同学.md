@@ -127,7 +127,7 @@ const extracted = await extractFromFiles([{ buffer, filename }, ...], { courseHi
 // extracted = { source:'file'|'image'|'mixed', text, transcript, pages[], warnings[], mock, stats, elapsedMs }
 ```
 
-- 有 Key → 调 `hunyuan-vision` 真识别；无 Key → MOCK 转录，链路照跑
+- 有 Key → 调 `hy-vision-2.0-instruct` 真识别；无 Key → MOCK 转录，链路照跑
 - 多页自动合并（并发 2，页序稳定）；单页失败不拖垮整份，只有全部失败才抛错
 - 服务端会用 sharp 做 EXIF 转正 + 压缩（long edge 1600px），前端不压缩也不会 OOM；sharp 不可用自动降级为原图直传
 - 返回结果请把 `transcript` 原样给前端（老师要校对）；`source` 用于打「来自拍照」标签
