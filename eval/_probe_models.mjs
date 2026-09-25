@@ -1,4 +1,7 @@
 // 探测 TokenHub 网关可用文本模型 + 各模型响应时延（不打印 Key）
+// ⚠️ 本脚本仅为「网关连通性 / 模型是否存在」的一次性诊断工具，不是产品模型选型。
+//    产品上线仅用腾讯混元 hy3（文本）+ hy-vision-2.0-instruct（视觉）；下方 candidates 里
+//    其它名称只是当年探测是否存在的候选，实测绝大多数返回 400 不存在，详见《对接契约》§0.1。
 import { readFileSync } from 'node:fs';
 
 function loadEnv() {

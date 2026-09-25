@@ -1,4 +1,6 @@
 // 一次性真实链路验证：用 .env.local 的 Key 打混元老端点
+// ⚠️ 历史诊断脚本：用于验证「旧端点 api.hunyuan.cloud.tencent.com 已下线」这一结论。
+//    产品实际端点为 TokenHub（https://tokenhub.tencentmaas.com/v1），模型仅 hy3 + hy-vision-2.0-instruct。
 import fs from 'node:fs';
 
 function loadEnv() {
